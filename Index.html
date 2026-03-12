@@ -39,7 +39,7 @@
         tr:hover { background: #f9fafb; }
         
         /* Buttons & Badges */
-        .btn { padding: 8px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: 500; color: white; transition: 0.2s; font-size: 0.9rem; }
+        .btn { padding: 8px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: 500; color: white; transition: 0.2s; font-size: 0.9rem; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
         .btn:active { transform: scale(0.95); }
         .btn-green { background: #22c55e; }
         .btn-green:hover { background: #16a34a; }
@@ -47,6 +47,8 @@
         .btn-red:hover { background: #dc2626; }
         .btn-blue { background: #3b82f6; }
         .btn-blue:hover { background: #2563eb; }
+        .btn-gray { background: #6b7280; }
+        .btn-gray:hover { background: #4b5563; }
         
         .badge { padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
         .b-pending { background: #fef08a; color: #854d0e; }
@@ -56,6 +58,8 @@
         .section { display: none; animation: fadeIn 0.3s ease; }
         .section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .action-btns { display: flex; gap: 5px; flex-wrap: wrap; }
     </style>
 </head>
 <body>
@@ -144,7 +148,7 @@
 
         <div id="user-section" class="section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 class="section-title" style="margin-bottom: 0;">จัดการสมาชิก</h2>
+                <h2 class="section-title" style="margin-bottom: 0;">จัดการสมาชิก (เครดิต & ล็อคผล)</h2>
                 <button class="btn btn-blue" onclick="createUser()"><i class="fas fa-plus"></i> เพิ่มสมาชิกใหม่</button>
             </div>
             <div class="card">
@@ -154,7 +158,7 @@
                             <th>ID (6 หลัก)</th>
                             <th>ชื่อ</th>
                             <th>รหัสผ่าน</th>
-                            <th>ยอดเงินคงเหลือ</th>
+                            <th>ยอดเงิน / โอกาสชนะ</th>
                             <th>จัดการ</th>
                         </tr>
                     </thead>
@@ -178,7 +182,7 @@
     </div>
 
     <script>
-        // ⚠️ ใส่ Firebase Config ตรงนี้ (ห้ามลืมเปลี่ยนถ้าใช้โปรเจกต์อื่น)
+        // ⚠️ ใส่ Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyCrpBKrWplX3qQT_h-QMftmaTSV71sikf4",
             projectId: "fnag-b078c"
@@ -221,21 +225,21 @@
                     pendingCount++;
                     pendingHtml += rowHtml + `
                         <td>
-                            <button class="btn btn-green" style="margin-right:5px;" onclick="approveWd('${tx.id}')"><i class="fas fa-check"></i> อนุมัติ</button>
-                            <button class="btn btn-red" onclick="cancelWd('${tx.id}', '${tx.uid}', ${tx.amount})"><i class="fas fa-times"></i> ยกเลิก(คืนเงิน)</button>
+                            <div class="action-btns">
+                                <button class="btn btn-green" onclick="approveWd('${tx.id}')"><i class="fas fa-check"></i> อนุมัติ</button>
+                                <button class="btn btn-red" onclick="cancelWd('${tx.id}', '${tx.uid}', ${tx.amount})"><i class="fas fa-times"></i></button>
+                            </div>
                         </td>
                     </tr>`;
                 } else {
                     if(tx.status === 'success') successAmount += tx.amount;
-                    historyHtml += rowHtml + `</tr>`; // หน้าประวัติไม่ต้องมีปุ่มจัดการ
+                    historyHtml += rowHtml + `</tr>`;
                 }
             });
 
-            // อัปเดตตาราง
             document.getElementById('wd-table').innerHTML = pendingHtml || '<tr><td colspan="6" style="text-align:center; padding:30px; color:#9ca3af;">ไม่มีรายการรอถอน</td></tr>';
             document.getElementById('history-table').innerHTML = historyHtml || '<tr><td colspan="5" style="text-align:center; padding:30px; color:#9ca3af;">ไม่มีประวัติ</td></tr>';
             
-            // อัปเดต Dashboard & Badge
             document.getElementById('dash-pending-count').innerText = pendingCount;
             document.getElementById('dash-success-amount').innerText = successAmount.toLocaleString();
             
@@ -244,31 +248,29 @@
             else { badge.style.display = 'none'; }
         });
 
-        // --- จัดการถอนเงิน ---
+        // จัดการถอนเงิน
         async function approveWd(id) {
-            const res = await Swal.fire({ title: 'ยืนยันโอนเงิน?', text: 'คุณโอนเงินให้ลูกค้าเรียบร้อยแล้วใช่หรือไม่?', icon: 'question', showCancelButton: true, confirmButtonColor: '#22c55e', confirmButtonText: 'ยืนยัน' });
+            const res = await Swal.fire({ title: 'ยืนยันโอนเงิน?', text: 'โอนเงินให้ลูกค้าเรียบร้อยแล้วใช่หรือไม่?', icon: 'question', showCancelButton: true, confirmButtonColor: '#22c55e', confirmButtonText: 'ยืนยัน' });
             if(res.isConfirmed) {
                 await db.collection('transactions').doc(id).update({ status: 'success' });
-                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'อนุมัติแล้ว ย้ายไปหน้าประวัติ', showConfirmButton: false, timer: 1500});
+                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'อนุมัติแล้ว', showConfirmButton: false, timer: 1500});
             }
         }
 
         async function cancelWd(txId, uid, amount) {
-            const res = await Swal.fire({ title: 'ยกเลิกและคืนเงิน?', text: `ระบบจะคืนเงิน ${amount} บาท กลับเข้ากระเป๋าลูกค้า`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'ยกเลิกบิล' });
+            const res = await Swal.fire({ title: 'ยกเลิกและคืนเงิน?', text: `ระบบจะคืนเงิน ${amount} บาท ให้ลูกค้า`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'ยกเลิกบิล' });
             if(res.isConfirmed) {
                 const batch = db.batch();
                 batch.update(db.collection('transactions').doc(txId), { status: 'cancel' });
-                
                 const userRef = db.collection('users').doc(uid);
                 const userSnap = await userRef.get();
                 if(userSnap.exists) { batch.update(userRef, { balance: userSnap.data().balance + amount }); }
-                
                 await batch.commit();
-                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'คืนเงินสำเร็จ ย้ายไปหน้าประวัติ', showConfirmButton: false, timer: 1500});
+                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'คืนเงินสำเร็จ', showConfirmButton: false, timer: 1500});
             }
         }
 
-        // --- 2. Real-time Users & Auto ID Generator ---
+        // --- 2. Real-time Users & Game Functions ---
         db.collection('users').onSnapshot(snap => {
             let html = '';
             let totalUsers = 0;
@@ -278,26 +280,32 @@
                 const u = doc.data();
                 totalUsers++;
                 totalBalance += (u.balance || 0);
+                const winRate = u.winRate !== undefined ? u.winRate : 35; // ค่าเริ่มต้น 35% ถ้าไม่มี
+                const winRateColor = winRate >= 50 ? '#ef4444' : '#d97706';
                 
                 html += `<tr>
                     <td><span style="background:#e5e7eb; padding:4px 8px; border-radius:6px; font-weight:600; letter-spacing:1px;">${doc.id}</span></td>
                     <td><b>${u.name}</b></td>
                     <td><span style="color:#6b7280;">${u.password}</span></td>
-                    <td style="color:#16a34a; font-weight:600; font-size:1.1rem;">${(u.balance || 0).toLocaleString()} ฿</td>
                     <td>
-                        <button class="btn btn-blue" style="margin-right:5px;" onclick="editBalance('${doc.id}', ${u.balance || 0})"><i class="fas fa-coins"></i> แก้ไขเงิน</button>
-                        <button class="btn btn-red" onclick="deleteUser('${doc.id}')"><i class="fas fa-trash"></i></button>
+                        <div style="color:#16a34a; font-weight:600; font-size:1.1rem;">${(u.balance || 0).toLocaleString()} ฿</div>
+                        <div style="font-size:0.85rem; color:${winRateColor}; font-weight:500;">Win Rate: ${winRate}%</div>
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn btn-blue" onclick="editUser('${doc.id}', ${u.balance || 0}, ${winRate})"><i class="fas fa-edit"></i> แก้ไข</button>
+                            <button class="btn btn-gray" onclick="viewHistory('${doc.id}')"><i class="fas fa-gamepad"></i> ประวัติเล่น</button>
+                            <button class="btn btn-red" onclick="deleteUser('${doc.id}')"><i class="fas fa-trash"></i></button>
+                        </div>
                     </td>
                 </tr>`;
             });
             document.getElementById('user-table').innerHTML = html || '<tr><td colspan="5" style="text-align:center;">ไม่มีข้อมูลสมาชิก</td></tr>';
             
-            // อัปเดต Dashboard
             document.getElementById('dash-users').innerText = totalUsers;
             document.getElementById('dash-total-balance').innerText = totalBalance.toLocaleString();
         });
 
-        // ฟังก์ชันสุ่มเลข 6 หลักที่ไม่ซ้ำในฐานข้อมูล
         async function generateUniqueId() {
             let isUnique = false;
             let newId = '';
@@ -313,41 +321,108 @@
             const { value: formValues } = await Swal.fire({
                 title: 'สร้างสมาชิกใหม่',
                 html: '<div style="text-align:left; margin-bottom:10px;"><label style="font-size:0.9rem; color:gray;">ชื่อลูกค้า</label><input id="swal-name" class="swal2-input" placeholder="ชื่อเล่นหรือชื่อจริง" style="margin-top:5px;"></div>' +
-                      '<div style="text-align:left;"><label style="font-size:0.9rem; color:gray;">ตั้งรหัสผ่าน</label><input id="swal-pw" class="swal2-input" placeholder="รหัสผ่านสำหรับเข้าสู่ระบบ" style="margin-top:5px;"></div>',
+                      '<div style="text-align:left;"><label style="font-size:0.9rem; color:gray;">ตั้งรหัสผ่าน</label><input id="swal-pw" class="swal2-input" placeholder="รหัสผ่านเข้าสู่ระบบ" style="margin-top:5px;"></div>',
                 focusConfirm: false,
                 showCancelButton: true,
-                confirmButtonText: 'สร้าง ID อัตโนมัติ',
+                confirmButtonText: 'สร้าง ID',
                 preConfirm: () => {
                     return [document.getElementById('swal-name').value, document.getElementById('swal-pw').value]
                 }
             });
 
             if(formValues && formValues[0] && formValues[1]) {
-                Swal.fire({ title: 'กำลังสุ่ม ID...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-                
+                Swal.fire({ title: 'กำลังสร้าง...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
                 try {
                     const newId = await generateUniqueId();
                     await db.collection('users').doc(newId).set({
-                        name: formValues[0], password: formValues[1], balance: 0, bank: '', bankAcc: '', bankName: ''
+                        name: formValues[0], 
+                        password: formValues[1], 
+                        balance: 0, 
+                        winRate: 35, // โอกาสชนะเริ่มต้น 35%
+                        history: [], // ประวัติว่างเปล่า
+                        bank: '', bankAcc: '', bankName: ''
                     });
                     
                     Swal.fire({
                         title: 'สร้างสำเร็จ!',
-                        html: `ID ของลูกค้าคือ<br><br><span style="font-size:2.5rem; font-weight:bold; color:#22c55e; letter-spacing:3px;">${newId}</span><br><br>คัดลอกส่งให้ลูกค้าล็อคอินได้เลย`,
+                        html: `ID เข้าเกม: <span style="font-size:2rem; font-weight:bold; color:#22c55e;">${newId}</span>`,
                         icon: 'success'
                     });
                 } catch(e) { Swal.fire('ผิดพลาด', 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้', 'error'); }
-            } else if(formValues) { Swal.fire('แจ้งเตือน', 'กรุณากรอกชื่อและรหัสผ่านให้ครบ', 'warning'); }
+            } else if(formValues) { Swal.fire('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบ', 'warning'); }
         }
 
-        async function editBalance(uid, currentBal) {
-            const { value: amount } = await Swal.fire({
-                title: 'แก้ไขยอดเงิน', input: 'number', inputValue: currentBal, showCancelButton: true, confirmButtonText: 'บันทึก'
+        // ฟังก์ชันแก้ไขเครดิต และอัตราชนะ (ล็อคผล)
+        async function editUser(uid, currentBal, currentWinRate) {
+            const { value: formValues } = await Swal.fire({
+                title: 'แก้ไขข้อมูลลูกค้า',
+                html:
+                    `<div style="text-align:left; margin-bottom:10px;"><label style="font-size:0.9rem; color:gray;">ยอดเงิน (Balance)</label>
+                    <input id="swal-bal" type="number" class="swal2-input" value="${currentBal}" style="margin-top:5px;"></div>
+                    <div style="text-align:left;"><label style="font-size:0.9rem; color:gray;">อัตราชนะ (Win Rate 0-100%)</label>
+                    <input id="swal-rate" type="number" class="swal2-input" value="${currentWinRate}" style="margin-top:5px;"></div>`,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'บันทึก',
+                preConfirm: () => {
+                    return {
+                        balance: parseFloat(document.getElementById('swal-bal').value),
+                        winRate: parseInt(document.getElementById('swal-rate').value)
+                    }
+                }
             });
-            if(amount !== undefined && amount !== null && amount !== "") {
-                await db.collection('users').doc(uid).update({ balance: parseFloat(amount) });
-                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'อัปเดตยอดเงินแล้ว', showConfirmButton: false, timer: 1500});
+
+            if(formValues) {
+                await db.collection('users').doc(uid).update({ 
+                    balance: formValues.balance,
+                    winRate: formValues.winRate
+                });
+                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'อัปเดตข้อมูลแล้ว', showConfirmButton: false, timer: 1500});
             }
+        }
+
+        // ฟังก์ชันดูประวัติการเล่นเกมของลูกค้าคนนั้นๆ
+        async function viewHistory(uid) {
+            Swal.fire({ title: 'กำลังโหลด...', didOpen: () => { Swal.showLoading(); }});
+            const docRef = await db.collection('users').doc(uid).get();
+            const userData = docRef.data();
+            const history = userData.history || [];
+
+            if (history.length === 0) {
+                return Swal.fire('ข้อมูลว่างเปล่า', 'ลูกค้ารายนี้ยังไม่เคยเล่นเกมเลย', 'info');
+            }
+
+            // ดึงเฉพาะ 20 ตาล่าสุด (กลับด้าน Array ให้ล่าสุดขึ้นก่อน)
+            const revHistory = [...history].reverse().slice(0, 20); 
+            
+            let tableRows = revHistory.map(h => {
+                const color = h.result === 'ชนะ' ? 'color:#16a34a;' : 'color:#ef4444;';
+                const betAmount = h.bet !== undefined ? h.bet : '-';
+                return `<tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 0.85rem; color: #4b5563;">${h.time || 'ไม่ระบุ'}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; font-weight: 500;">${betAmount}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; ${color} font-weight: bold;">${h.result}</td>
+                </tr>`;
+            }).join('');
+
+            Swal.fire({
+                title: `ประวัติการเล่น (${uid})`,
+                html: `<div style="max-height: 400px; overflow-y: auto; text-align: left;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="position: sticky; top: 0; background: white; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1);">
+                                <tr>
+                                    <th style="padding: 10px; text-align: left; font-size: 0.9rem; color: #111827;">วัน/เวลา</th>
+                                    <th style="padding: 10px; text-align: center; font-size: 0.9rem; color: #111827;">ยอดเดิมพัน</th>
+                                    <th style="padding: 10px; text-align: center; font-size: 0.9rem; color: #111827;">ผลลัพธ์</th>
+                                </tr>
+                            </thead>
+                            <tbody>${tableRows}</tbody>
+                        </table>
+                       </div>`,
+                width: 600,
+                confirmButtonText: 'ปิด',
+                confirmButtonColor: '#3b82f6'
+            });
         }
 
         async function deleteUser(uid) {
@@ -360,7 +435,7 @@
             try {
                 const sys = await db.collection('settings').doc('system').get();
                 if(sys.exists) document.getElementById('sys-withdraw').value = sys.data().withdraw_status || 'open';
-            } catch(e) {} // Ignore if document doesn't exist yet
+            } catch(e) {}
         };
 
         async function saveSystem() {
